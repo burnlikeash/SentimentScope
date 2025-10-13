@@ -1,0 +1,111 @@
+/* Dropdown Component Styles */
+.brands-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.brands-btn {
+    background: transparent;
+    color: #374151;
+    padding: 0.25rem 0.25rem;
+    border: none;
+    border-radius: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: none;
+}
+
+.brands-btn:hover {
+    color: #111827;
+}
+
+.dropdown-arrow {
+    transition: transform 0.2s ease;
+    color: #9ca3af;
+}
+
+.brands-dropdown.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background: white;
+    min-width: 200px;
+    max-width: min(90vw, 320px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    z-index: 1000;
+    top: 100%;
+    right: 0; /* anchor to the right edge of the trigger to avoid viewport overflow */
+    left: auto;
+    margin-top: 0.5rem;
+    overflow: hidden;
+}
+
+.brands-dropdown.open .dropdown-content {
+    display: block;
+}
+
+/* Hover-to-open removed; click only */
+
+.dropdown-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover {
+    background: #f9fafb;
+}
+
+/* Constrain height and allow scroll if too tall for viewport */
+.dropdown-content {
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+/* Mobile responsive dropdown */
+@media (max-width: 768px) {
+    .brands-dropdown {
+        width: 100%;
+    }
+    
+    .brands-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 0.5rem;
+    }
+    
+    .dropdown-content {
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .brands-btn {
+        font-size: 0.9rem;
+        padding: 0.375rem;
+    }
+    
+    .dropdown-item {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.9rem;
+    }
+}

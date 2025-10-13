@@ -1,0 +1,84 @@
+/* Filter Component Styles */
+.filters {
+    margin-bottom: 2rem;
+    font-family: "Oswald", sans-serif;
+}
+
+.filter-label {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    display: inline-block;
+    color: #374151;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.filter-btn:hover, 
+.filter-btn.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.filter-btn.active {
+    transform: none;
+}
+
+/* Mobile responsive filters */
+@media (max-width: 768px) {
+    .filters {
+        margin-bottom: 1.5rem;
+    }
+    
+    .filter-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .filter-buttons {
+        gap: 0.375rem;
+    }
+    
+    .filter-btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .filters {
+        margin-bottom: 1rem;
+    }
+    
+    .filter-label {
+        font-size: 0.85rem;
+        margin-bottom: 0.375rem;
+    }
+    
+    .filter-buttons {
+        gap: 0.25rem;
+        justify-content: center;
+    }
+    
+    .filter-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        border-radius: 15px;
+    }
+}
