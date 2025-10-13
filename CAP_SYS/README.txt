@@ -2,25 +2,6 @@ PREREQS:
 pip install -r requirements.txt
 
 
-AFTER PREREQS, DO THE FOLLOWING:
-
-- Start DATABASE API in terminal
-[ uvicorn db_api:app --reload --port 8000 ] 
-
-- Start ML API in terminal
-[ uvicorn ml_api:app --reload --port 8001 ]
-
-- RUN THE APIS
-# sentiment for all reviews
-curl -X POST http://127.0.0.1:8001/run-sentiment
-
-# topics for a specific phone (phone_id = 3)
-curl -X POST http://127.0.0.1:8001/run-all-topics
-
-
-
-
-
 #1  FIRST STEP IS TO UPLOAD THIS QUERY INTO DATABASE
 
 //STARTS HERE//
@@ -101,6 +82,24 @@ curl.exe -X POST http://127.0.0.1:8001/process-all
 - run this command in new terminal
 
 [uvicorn db_api:app --reload --port 8000]
+
+
+-----------------------------------------------
+TO USE THE APIS:
+
+- Start DATABASE API in terminal
+[ uvicorn db_api:app --reload --port 8000 ] 
+
+- Start ML API in terminal
+[ uvicorn ml_api:app --reload --port 8001 ]
+
+- RUN THE APIS
+# sentiment for all reviews
+curl -X POST http://127.0.0.1:8001/run-sentiment
+
+# topics for a specific phone (phone_id = 3)
+curl -X POST http://127.0.0.1:8001/run-all-topics
+
 
 
 
