@@ -103,6 +103,7 @@ class FilterComponent {
             btn.addEventListener('click', () => {
                 let sentiment = null;
                 if (btn.classList.contains('positive')) sentiment = 'positive';
+                else if (btn.classList.contains('neutral')) sentiment = 'neutral';
                 else if (btn.classList.contains('negative')) sentiment = 'negative';
                 this.selectSentiment(sentiment, btn);
             });

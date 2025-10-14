@@ -41,6 +41,13 @@
     border-color: #ef4444;
 }
 
+.sentiment-btn.neutral:hover,
+.sentiment-btn.neutral.active {
+    background: #9ca3af;
+    color: white;
+    border-color: #9ca3af;
+}
+
 
 /* Topic Buttons */
 .topics-grid {
