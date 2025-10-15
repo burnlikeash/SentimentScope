@@ -1,5 +1,6 @@
 # ml_api.py - Simple and Robust ML Pipeline API
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import mysql.connector
 from transformers import pipeline
@@ -105,6 +106,71 @@ def health_check():
             "embedding": embedding_model is not None,
             "nlp": nlp is not None
         }
+    }
+
+# -------- Single-text analysis (sentiment + topic) --------
+class AnalyzeTextRequest(BaseModel):
+    text: str
+
+@app.post("/analyze-text")
+def analyze_text(req: AnalyzeTextRequest):
+    if not sentiment_model:
+        raise HTTPException(status_code=500, detail="Sentiment model not loaded")
+
+    raw_text = (req.text or "").strip()
+    if len(raw_text) == 0:
+        raise HTTPException(status_code=400, detail="Text is required")
+
+    # Sentiment using existing model and logic similar to /run-sentiment
+    result = sentiment_model(raw_text)[0]
+    label = result['label'].lower()
+    score = float(result['score'])
+
+    if label == 'positive' and score < 0.7:
+        label = 'neutral'
+    elif label == 'negative' and score < 0.7:
+        label = 'neutral'
+
+    # Topic extraction (simple heuristic using spaCy noun chunks and keywords)
+    topics: List[str] = []
+    if nlp is not None:
+        try:
+            cleaned = clean_text(raw_text)
+            if cleaned:
+                doc = nlp(cleaned)
+                # Collect frequent noun chunks and nouns as candidate topics
+                candidate_words = []
+                for chunk in doc.noun_chunks:
+                    token_text = chunk.text.strip()
+                    if len(token_text.split()) <= 3 and len(token_text) >= 3:
+                        candidate_words.append(token_text.replace(" ", "_"))
+                for token in doc:
+                    if token.pos_ in {"NOUN", "PROPN"} and token.is_alpha and len(token.text) >= 3:
+                        candidate_words.append(token.lemma_.strip())
+
+                # Basic scoring by frequency
+                freq: Dict[str, int] = {}
+                for w in candidate_words:
+                    if not w:
+                        continue
+                    freq[w] = freq.get(w, 0) + 1
+
+                # Take top 3 unique by frequency
+                top_words = sorted(freq.items(), key=lambda kv: kv[1], reverse=True)[:3]
+                raw_topics = [w for (w, _) in top_words]
+                # Convert to readable labels
+                if raw_topics:
+                    label_text = make_topic_label(raw_topics)
+                    if label_text:
+                        topics = [label_text]
+        except Exception:
+            # If topic extraction fails, just return empty topics
+            topics = []
+
+    return {
+        "sentiment": label,
+        "confidence": score,
+        "topics": topics
     }
 
 # Get processing status

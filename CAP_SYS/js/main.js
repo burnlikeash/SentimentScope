@@ -208,6 +208,76 @@ class SentimentScopeApp {
                 });
             }
 
+            // Wire Sentiment modal
+            const sentimentBtn = document.getElementById('sentiment-btn');
+            const sentimentModal = document.getElementById('sentiment-modal');
+            const closeSentimentModal = document.getElementById('close-sentiment-modal');
+            const analyzeBtn = document.getElementById('analyze-text-btn');
+            const sentimentInput = document.getElementById('sentiment-input');
+            const sentimentResult = document.getElementById('sentiment-result');
+
+            const showSentimentModal = () => {
+                if (!sentimentModal) return;
+                sentimentModal.style.display = 'flex';
+                sentimentModal.style.opacity = '0';
+                sentimentModal.style.transition = 'opacity 0.3s ease';
+                document.body.style.overflow = 'hidden';
+                setTimeout(() => { sentimentModal.style.opacity = '1'; }, 10);
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        hideSentimentModal();
+                        document.removeEventListener('keydown', handleEscape);
+                    }
+                };
+                document.addEventListener('keydown', handleEscape);
+            };
+
+            const hideSentimentModal = () => {
+                if (!sentimentModal) return;
+                sentimentModal.style.opacity = '0';
+                sentimentModal.style.transition = 'opacity 0.3s ease';
+                document.body.style.overflow = '';
+                setTimeout(() => { sentimentModal.style.display = 'none'; }, 300);
+            };
+
+            if (sentimentBtn && sentimentModal) {
+                sentimentBtn.addEventListener('click', showSentimentModal);
+            }
+            if (closeSentimentModal && sentimentModal) {
+                closeSentimentModal.addEventListener('click', hideSentimentModal);
+            }
+            if (sentimentModal) {
+                sentimentModal.addEventListener('click', (e) => {
+                    if (e.target === sentimentModal) hideSentimentModal();
+                });
+            }
+
+            if (analyzeBtn && sentimentInput && sentimentResult) {
+                analyzeBtn.addEventListener('click', async () => {
+                    const text = sentimentInput.value.trim();
+                    if (!text) {
+                        sentimentResult.textContent = 'Please enter some text.';
+                        return;
+                    }
+                    sentimentResult.innerHTML = '<span style="color:#6b7280;">Analyzing...</span>';
+                    try {
+                        const res = await window.apiService.analyzeText(text);
+                        const sentiment = res.sentiment || 'neutral';
+                        const confidence = typeof res.confidence === 'number' ? (res.confidence * 100).toFixed(1) + '%' : '';
+                        const topics = Array.isArray(res.topics) && res.topics.length ? res.topics.join(', ') : 'No topics detected';
+                        sentimentResult.innerHTML = `
+                            <div style="display:flex; flex-direction: column; gap: 0.35rem;">
+                                <div><strong>Sentiment:</strong> ${sentiment}</div>
+                                <div><strong>Confidence:</strong> ${confidence}</div>
+                                <div><strong>Topic(s):</strong> ${topics}</div>
+                            </div>`;
+                    } catch (err) {
+                        console.error(err);
+                        sentimentResult.innerHTML = '<span style="color:#b91c1c;">Failed to analyze. Is the ML API running on http://localhost:8001?</span>';
+                    }
+                });
+            }
+
             // Hide loading state
             this.hideLoadingState();
 

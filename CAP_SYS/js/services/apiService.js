@@ -79,6 +79,29 @@
 			return this.apiCall('/stats');
 		}
 
+		// ML API (FastAPI ml_api.py assumed at http://localhost:8001)
+		async analyzeText(text) {
+			const mlBase = 'http://localhost:8001';
+			const url = `${mlBase}/analyze-text`;
+			const controller = new AbortController();
+			const timeout = setTimeout(() => controller.abort(), 20000);
+			try {
+				const resp = await fetch(url, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ text }),
+					signal: controller.signal,
+					mode: 'cors'
+				});
+				if (!resp.ok) {
+					throw new Error(`ML API error ${resp.status}: ${resp.statusText}`);
+				}
+				return await resp.json();
+			} finally {
+				clearTimeout(timeout);
+			}
+		}
+
 		// Shape raw DB rows into the UI product shape expected by components
 		transformPhoneData(phoneRow, sentiments = {}) {
 			const dominantSentiment = (() => {
