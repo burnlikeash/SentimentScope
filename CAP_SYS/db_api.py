@@ -1,4 +1,4 @@
-# db_api.py - Updated for Your Specific Schema
+# db_api.py
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import mysql.connector

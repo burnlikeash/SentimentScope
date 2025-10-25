@@ -116,11 +116,7 @@
 				name: phoneRow.phone_name,
 				brand: phoneRow.brand_name,
 				category: 'Smartphones',
-				description: `Reviews: ${phoneRow.review_count || 0}. Stars ~ ${
-					phoneRow.star_rating != null
-						? Number(phoneRow.star_rating).toFixed(1)
-						: (phoneRow.avg_sentiment_rating != null ? Number(phoneRow.avg_sentiment_rating).toFixed(1) : 'N/A')
-				}.`,
+				description: `Reviews: ${phoneRow.review_count || 0}.`,
 				sentiment: dominantSentiment,
 				star_rating: phoneRow.star_rating != null
 					? Number(phoneRow.star_rating)

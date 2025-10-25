@@ -425,18 +425,28 @@ class SentimentScopeApp {
 			if (completeData.topics.length > 0) {
 				additionalSections += `
 					<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
-						<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #111827;">Key Discussion Topics</h3>
+						<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #111827;">Frequently Mentioned Topics</h3>
 						<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-							${completeData.topics.slice(0, 5).map(topic => `
-								<div style="background: #f0f9ff; color: #1e40af; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; border: 1px solid #bfdbfe;">${formatTopicLabel(topic.topic_label)}</div>
-							`).join('')}
+						${completeData.topics.slice(0, 5).map(topic => {
+								const lbl = formatTopicLabel(topic.topic_label);
+								let s = 'neutral';
+								try {
+									if (window.dataManager && typeof window.dataManager.getTopicSentiment === 'function') {
+										s = window.dataManager.getTopicSentiment(topic.topic_label);
+									}
+								} catch (e) {}
+							const bg = s === 'positive' ? '#dcfce7' : (s === 'negative' ? '#fee2e2' : '#f3f4f6');
+							const bd = s === 'positive' ? '#86efac' : (s === 'negative' ? '#fecaca' : '#e5e7eb');
+							const fg = s === 'positive' ? '#166534' : (s === 'negative' ? '#991b1b' : '#6b7280');
+							return `<div style=\"background: ${bg}; color: ${fg}; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; border: 1px solid ${bd};\">${lbl}</div>`;
+							}).join('')}
 						</div>
 					</div>
 				`;
 			} else {
 				additionalSections += `
 					<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
-						<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #111827;">Key Discussion Topics</h3>
+						<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #111827;">Frequently Mentioned Topics</h3>
 						<div style="color: #6b7280; font-size: 0.875rem; font-style: italic;">
 							No topics available.
 						</div>
@@ -456,10 +466,16 @@ class SentimentScopeApp {
 						<div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 8px; margin: 0 auto 0.5rem auto; display: flex; align-items: center; justify-content: center;">
 							<img src="images/brands/${(product.brand || '').toLowerCase()}.png" alt="${product.brand || 'brand'}" style="max-width: 100%; max-height: 100%; object-fit: contain; display: block;" onerror="this.onerror=null; this.replaceWith(document.createTextNode('${(product.icon || '📱').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\n/g, '')}'));">
 						</div>
-						<div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-							<span style="display: inline-block; padding: 0.25rem 0.75rem; background: ${this.getSentimentBackgroundColor(product.sentiment)}; color: ${this.getSentimentTextColor(product.sentiment)}; border-radius: 20px; font-size: 0.875rem; font-weight: 500;">${capitalize(product.sentiment)} Reviews</span>
-							<span style="display: inline-block; padding: 0.25rem 0.75rem; background: #f3f4f6; color: #374151; border-radius: 20px; font-size: 0.875rem; font-weight: 500;">${Number(product.rating || 0)}/5 ⭐</span>
-						</div>
+					<div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+						${(() => {
+							const ratingVal = Number(product.rating || product.star_rating || 0);
+							const label = (typeof getBiasLabelFromRating === 'function') ? getBiasLabelFromRating(ratingVal) : `${capitalize(product.sentiment)} Reviews`;
+							const polarity = (typeof getPolarityFromRating === 'function') ? getPolarityFromRating(ratingVal) : (product.sentiment || 'neutral');
+							const bg = this.getSentimentBackgroundColor(polarity);
+							const fg = this.getSentimentTextColor(polarity);
+							return `<span style=\"display: inline-block; padding: 0.25rem 0.75rem; background: ${bg}; color: ${fg}; border-radius: 20px; font-size: 0.875rem; font-weight: 500;\">${label}</span>`;
+						})()}
+					</div>
 					</div>
 					<p style="color: #6b7280; line-height: 1.6; margin-bottom: 1rem;">${product.description || ''}</p>
 					<div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #f3f4f6;">

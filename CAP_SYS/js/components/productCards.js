@@ -45,9 +45,19 @@ class ProductCardsComponent {
 
     applyFilters(products, filters) {
         return products.filter(product => {
-            // Filter by sentiment
-            if (filters.sentiment && product.sentiment !== filters.sentiment) {
-                return false;
+            // Filter by sentiment using bias mapping from numeric rating
+            if (filters.sentiment) {
+                const ratingVal = Number(product.star_rating ?? product.rating ?? 0);
+                let requiredLabel = null;
+                if (filters.sentiment === 'positive') requiredLabel = 'Mostly Positive';
+                else if (filters.sentiment === 'neutral') requiredLabel = 'Neutral';
+                else if (filters.sentiment === 'negative') requiredLabel = 'Mostly Negative';
+                if (requiredLabel) {
+                    const biasLabel = (typeof getBiasLabelFromRating === 'function')
+                        ? getBiasLabelFromRating(ratingVal)
+                        : `Mostly ${capitalize(product.sentiment || 'neutral')}`;
+                    if (biasLabel !== requiredLabel) return false;
+                }
             }
             
             // Filter by brand
@@ -209,9 +219,14 @@ class ProductCardsComponent {
         // Product footer
         const footer = createElement('div', ['product-footer']);
         
-        // Rating
-        const rating = createElement('span', ['rating', product.sentiment], 
-            `Rating: ${capitalize(product.sentiment)}`);
+        // Rating - use five-level bias phrasing derived from numeric rating when available
+        const biasText = typeof getBiasLabelFromRating === 'function'
+            ? getBiasLabelFromRating(product.star_rating ?? product.rating)
+            : `Mostly ${capitalize(product.sentiment)}`;
+        const colorClass = typeof getPolarityFromRating === 'function'
+            ? getPolarityFromRating(product.star_rating ?? product.rating)
+            : (product.sentiment || 'neutral');
+        const rating = createElement('span', ['rating', colorClass], `Rating: ${biasText}`);
         
         // View review link
         const viewReview = createElement('a', ['view-review'], 'View Full Review', {

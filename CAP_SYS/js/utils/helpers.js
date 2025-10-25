@@ -109,3 +109,29 @@ function animateElement(element, property, from, to, duration = 300) {
     
     requestAnimationFrame(animate);
 }
+
+/**
+ * Map a numeric star rating to a five-level bias label
+ */
+function getBiasLabelFromRating(rating) {
+    const r = Number(rating || 0);
+    const rounded = Math.round(r);
+    switch (rounded) {
+        case 1: return 'Mostly Negative';
+        case 2: return 'Somewhat Negative';
+        case 3: return 'Neutral';
+        case 4: return 'Somewhat Positive';
+        case 5: return 'Mostly Positive';
+        default: return 'Neutral';
+    }
+}
+
+/**
+ * Map a numeric star rating to a coarse sentiment for coloring
+ */
+function getPolarityFromRating(rating) {
+    const r = Math.round(Number(rating || 0));
+    if (r >= 4) return 'positive';
+    if (r <= 2) return 'negative';
+    return 'neutral';
+}

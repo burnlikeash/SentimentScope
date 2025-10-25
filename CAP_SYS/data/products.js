@@ -15,6 +15,7 @@ class DataManager {
         this.products = [];
         this.brands = [];
         this.topics = [];
+		this.topicStats = {}; // { [topic]: { count, sentimentCounts: {positive, neutral, negative}, dominantSentiment, score } }
         this.isLoading = false;
         this.useDatabase = true;
         this.lastFetch = null;
@@ -63,12 +64,12 @@ class DataManager {
             const phonesData = await window.apiService.getAllPhones();
 
             // Derive unique topics across phones
-            const topicSet = new Set();
-            phonesData.forEach(p => {
-                if (typeof p.topics === 'string' && p.topics.trim().length > 0) {
-                    p.topics.split(',').forEach(t => topicSet.add(t.trim()))
-                }
-            });
+			const topicSet = new Set();
+			phonesData.forEach(p => {
+				if (typeof p.topics === 'string' && p.topics.trim().length > 0) {
+					p.topics.split(',').forEach(t => topicSet.add(t.trim()))
+				}
+			});
             
             // Filter out problematic topics
             const filteredTopics = Array.from(topicSet).filter(topic => {
@@ -80,7 +81,7 @@ class DataManager {
                 return true;
             });
             
-            this.topics = filteredTopics;
+			this.topics = filteredTopics;
 
             // Transform database phones to frontend format
             // Batch sentiment requests to reduce API calls
@@ -94,10 +95,39 @@ class DataManager {
                 }
             });
             
-            const phoneSentimentResults = await Promise.all(sentimentPromises);
-            this.products = phoneSentimentResults.map(({ phone, sentiments }) => 
-                window.apiService.transformPhoneData(phone, sentiments)
-            );
+			const phoneSentimentResults = await Promise.all(sentimentPromises);
+			this.products = phoneSentimentResults.map(({ phone, sentiments }) => 
+				window.apiService.transformPhoneData(phone, sentiments)
+			);
+
+			// Compute topic relevance (frequency across products) and topic sentiment bias
+			this.topicStats = {};
+			for (const product of this.products) {
+				const productSentiment = product.sentiment || 'neutral';
+				const productTopics = Array.isArray(product.topics) ? product.topics : [];
+				for (const topic of productTopics) {
+					if (!this.topicStats[topic]) {
+						this.topicStats[topic] = {
+							count: 0,
+							sentimentCounts: { positive: 0, neutral: 0, negative: 0 },
+							dominantSentiment: 'neutral',
+							score: 0
+						};
+					}
+					this.topicStats[topic].count += 1;
+					if (this.topicStats[topic].sentimentCounts[productSentiment] != null) {
+						this.topicStats[topic].sentimentCounts[productSentiment] += 1;
+					}
+				}
+			}
+			// finalize dominant sentiment and score
+			Object.keys(this.topicStats).forEach(topic => {
+				const stats = this.topicStats[topic];
+				const entries = Object.entries(stats.sentimentCounts);
+				entries.sort((a, b) => b[1] - a[1]);
+				stats.dominantSentiment = (entries[0] && entries[0][1] > 0) ? entries[0][0] : 'neutral';
+				stats.score = stats.count; // simple relevance = frequency across products
+			});
 
             console.log(`✅ Loaded ${this.products.length} products from database`);
             this.lastFetch = Date.now();
@@ -142,6 +172,18 @@ class DataManager {
     getTopics() {
         return this.topics;
     }
+
+	// Return up to `limit` topics ordered by relevance score (descending)
+	getTopTopics(limit = 10) {
+		const scored = this.topics.map(t => ({ topic: t, score: (this.topicStats[t]?.score) || 0 }));
+		scored.sort((a, b) => b.score - a.score);
+		return scored.slice(0, Math.max(0, limit)).map(x => x.topic);
+	}
+
+	// Get dominant sentiment color label for a topic based on aggregated product sentiments
+	getTopicSentiment(topic) {
+		return (this.topicStats[topic]?.dominantSentiment) || 'neutral';
+	}
 
     async searchProducts(query, filters = {}) {
         try {

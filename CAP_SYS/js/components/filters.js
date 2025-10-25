@@ -41,8 +41,13 @@ class FilterComponent {
         // Clear existing topics
         this.topicsGrid.innerHTML = '';
         
-        // Get topics
-        let topics = window.dataManager ? window.dataManager.getTopics() : [];
+        // Get topics (restrict to top 20 by relevance to ensure variety after deduplication)
+        let topics = [];
+        if (window.dataManager && typeof window.dataManager.getTopTopics === 'function') {
+            topics = window.dataManager.getTopTopics(20);
+        } else if (window.dataManager) {
+            topics = window.dataManager.getTopics();
+        }
         
         // Additional filtering for better topic quality
         topics = topics.filter(topic => {
@@ -54,15 +59,38 @@ class FilterComponent {
             return true;
         });
         
-        // Shuffle topics randomly
-        const shuffled = [...topics].sort(() => 0.5 - Math.random());
+        // Strong deduplication: normalize case and trim whitespace, then use Set
+        const normalizedTopics = topics.map(t => t.trim().toLowerCase());
+        const uniqueTopics = [];
+        const seen = new Set();
         
-        // Pick 6 topics (or fewer if less than 6 available)
+        for (let i = 0; i < topics.length; i++) {
+            const normalized = normalizedTopics[i];
+            if (!seen.has(normalized)) {
+                seen.add(normalized);
+                uniqueTopics.push(topics[i]); // Keep original case
+            }
+        }
+        
+        // Shuffle and pick 6 topics from high-relevance, deduplicated pool
+        const shuffled = [...uniqueTopics].sort(() => 0.5 - Math.random());
         const selectedTopics = shuffled.slice(0, 6);
         
         // Add topic buttons
         selectedTopics.forEach(topic => {
-            const button = createElement('button', ['topic-btn'], this.formatTopicLabel(topic));
+            const classes = ['topic-btn'];
+            // Color-code by topic sentiment via background color classes
+            try {
+                if (window.dataManager && typeof window.dataManager.getTopicSentiment === 'function') {
+                    const s = window.dataManager.getTopicSentiment(topic);
+                    if (s === 'positive') classes.push('topic-positive');
+                    else if (s === 'negative') classes.push('topic-negative');
+                    else classes.push('topic-neutral');
+                } else {
+                    classes.push('topic-neutral');
+                }
+            } catch (e) { classes.push('topic-neutral'); }
+            const button = createElement('button', classes, this.formatTopicLabel(topic));
             button.addEventListener('click', () => this.selectTopic(topic));
             this.topicsGrid.appendChild(button);
         });
@@ -77,14 +105,21 @@ class FilterComponent {
         this.filterButtonsContainer.innerHTML = '';
         
         // Add label
-        const label = createElement('span', [], 'Average Sentiment (Stars):');
+        const label = createElement('span', [], 'Filter by Sentiment Bias:');
         label.style.marginRight = '8px';
         this.filterButtonsContainer.appendChild(label);
     
-        // Create star rating buttons 1★ to 5★
+        // Create descriptive sentiment bias buttons mapped from star ratings 1-5
+        const labels = {
+            1: 'Mostly Negative',
+            2: 'Somewhat Negative',
+            3: 'Neutral',
+            4: 'Somewhat Positive',
+            5: 'Mostly Positive'
+        };
         [1, 2, 3, 4, 5].forEach(val => {
-            const filter = { name: `${val}★`, type: 'star_rating', value: val };
-            const button = createElement('button', ['filter-btn'], `${val}★`, {
+            const filter = { name: labels[val], type: 'star_rating', value: val };
+            const button = createElement('button', ['filter-btn'], labels[val], {
                 'data-type': filter.type,
                 'data-value': String(filter.value)
             });

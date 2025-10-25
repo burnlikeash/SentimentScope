@@ -27,6 +27,11 @@
     color: #374151;
 }
 
+.sentiment-btn.positive {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
 .sentiment-btn.positive:hover, 
 .sentiment-btn.positive.active {
     background: #10b981;
@@ -34,6 +39,11 @@
     border-color: #10b981;
 }
 
+.sentiment-btn.negative {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
 .sentiment-btn.negative:hover, 
 .sentiment-btn.negative.active {
     background: #ef4444;
@@ -41,6 +51,11 @@
     border-color: #ef4444;
 }
 
+.sentiment-btn.neutral {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #6b7280;
+}
 .sentiment-btn.neutral:hover,
 .sentiment-btn.neutral.active {
     background: #9ca3af;
@@ -68,11 +83,34 @@
     text-align: center;
 }
 
-.topic-btn:hover, 
+.topic-btn:hover {
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+    transform: translateY(-1px);
+}
+
 .topic-btn.active {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
+    border: 2px solid #000000 !important;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+/* Topic sentiment background variants */
+.topic-btn.topic-positive {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+
+.topic-btn.topic-neutral {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #6b7280;
+}
+
+.topic-btn.topic-negative {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
 }
 
 /* About Button - matches brands button styling */
