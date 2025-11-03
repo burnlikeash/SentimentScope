@@ -108,7 +108,10 @@
 				const entries = Object.entries(sentiments);
 				if (entries.length === 0) return 'neutral';
 				entries.sort((a, b) => (b[1]?.count || 0) - (a[1]?.count || 0));
-				return entries[0][0];
+				const dominant = entries[0][0];
+				// Debug logging to help identify sentiment issues
+				console.log(`Phone "${phoneRow.phone_name}" sentiment breakdown:`, sentiments, '-> dominant:', dominant);
+				return dominant;
 			})();
 
 			return {

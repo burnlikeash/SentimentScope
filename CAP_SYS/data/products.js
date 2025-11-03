@@ -100,37 +100,45 @@ class DataManager {
 				window.apiService.transformPhoneData(phone, sentiments)
 			);
 
-			// Compute topic relevance (frequency across products) and topic sentiment bias
-			this.topicStats = {};
-			for (const product of this.products) {
-				const productSentiment = product.sentiment || 'neutral';
-				const productTopics = Array.isArray(product.topics) ? product.topics : [];
-				for (const topic of productTopics) {
-					if (!this.topicStats[topic]) {
-						this.topicStats[topic] = {
-							count: 0,
-							sentimentCounts: { positive: 0, neutral: 0, negative: 0 },
-							dominantSentiment: 'neutral',
-							score: 0
-						};
-					}
-					this.topicStats[topic].count += 1;
-					if (this.topicStats[topic].sentimentCounts[productSentiment] != null) {
-						this.topicStats[topic].sentimentCounts[productSentiment] += 1;
-					}
-				}
+	// Compute topic relevance (frequency across products) and topic sentiment bias
+	this.topicStats = {};
+	for (const product of this.products) {
+		const productSentiment = product.sentiment || 'neutral';
+		const productTopics = Array.isArray(product.topics) ? product.topics : [];
+		for (const topic of productTopics) {
+			if (!this.topicStats[topic]) {
+				this.topicStats[topic] = {
+					count: 0,
+					sentimentCounts: { positive: 0, neutral: 0, negative: 0 },
+					dominantSentiment: 'neutral',
+					score: 0
+				};
 			}
-			// finalize dominant sentiment and score
-			Object.keys(this.topicStats).forEach(topic => {
-				const stats = this.topicStats[topic];
-				const entries = Object.entries(stats.sentimentCounts);
-				entries.sort((a, b) => b[1] - a[1]);
-				stats.dominantSentiment = (entries[0] && entries[0][1] > 0) ? entries[0][0] : 'neutral';
-				stats.score = stats.count; // simple relevance = frequency across products
-			});
+			this.topicStats[topic].count += 1;
+			if (this.topicStats[topic].sentimentCounts[productSentiment] != null) {
+				this.topicStats[topic].sentimentCounts[productSentiment] += 1;
+			}
+		}
+	}
+	// finalize dominant sentiment and score
+	Object.keys(this.topicStats).forEach(topic => {
+		const stats = this.topicStats[topic];
+		const entries = Object.entries(stats.sentimentCounts);
+		entries.sort((a, b) => b[1] - a[1]);
+		// Only set dominant sentiment if we have actual sentiment data
+		if (entries[0] && entries[0][1] > 0) {
+			stats.dominantSentiment = entries[0][0];
+		} else {
+			stats.dominantSentiment = 'neutral';
+		}
+		stats.score = stats.count; // simple relevance = frequency across products
+	});
 
             console.log(`✅ Loaded ${this.products.length} products from database`);
             this.lastFetch = Date.now();
+            
+            // Debug topic sentiment calculation
+            this.debugTopicSentiments();
 
         } catch (error) {
             console.error('❌ Failed to load from database:', error);
@@ -182,7 +190,27 @@ class DataManager {
 
 	// Get dominant sentiment color label for a topic based on aggregated product sentiments
 	getTopicSentiment(topic) {
-		return (this.topicStats[topic]?.dominantSentiment) || 'neutral';
+		if (!topic || !this.topicStats[topic]) {
+			return 'neutral';
+		}
+		const stats = this.topicStats[topic];
+		// Debug logging to help identify issues
+		if (stats.dominantSentiment && stats.dominantSentiment !== 'neutral') {
+			console.log(`Topic "${topic}" has dominant sentiment: ${stats.dominantSentiment} (counts:`, stats.sentimentCounts, ')');
+		}
+		return stats.dominantSentiment || 'neutral';
+	}
+
+	// Debug function to inspect topic sentiment calculation
+	debugTopicSentiments() {
+		console.log('=== Topic Sentiment Debug Info ===');
+		console.log('Total topics:', this.topics.length);
+		console.log('Topic stats:', this.topicStats);
+		console.log('Sample products with sentiments:', this.products.slice(0, 3).map(p => ({
+			name: p.name,
+			sentiment: p.sentiment,
+			topics: p.topics
+		})));
 	}
 
     async searchProducts(query, filters = {}) {
@@ -278,6 +306,15 @@ class DataManager {
 
 // Create global data manager instance
 window.dataManager = new DataManager();
+
+// Expose debug function globally for browser console
+window.debugTopicSentiments = () => {
+    if (window.dataManager) {
+        window.dataManager.debugTopicSentiments();
+    } else {
+        console.log('DataManager not available');
+    }
+};
 
 // Legacy exports for backward compatibility
 let SAMPLE_PRODUCTS = [];

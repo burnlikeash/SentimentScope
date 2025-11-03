@@ -182,6 +182,7 @@ class SentimentScopeApp {
                 });
             }
 
+
             // Wire About button
             const aboutBtn = document.getElementById('about-btn');
             const aboutModal = document.getElementById('about-modal');
@@ -333,6 +334,7 @@ class SentimentScopeApp {
         });
     }
 
+
     async handleViewReview(product) {
         console.log('Opening detailed view for:', product.name);
 
@@ -433,8 +435,12 @@ class SentimentScopeApp {
 								try {
 									if (window.dataManager && typeof window.dataManager.getTopicSentiment === 'function') {
 										s = window.dataManager.getTopicSentiment(topic.topic_label);
+										// Debug logging for topic sentiment
+										console.log(`Topic "${topic.topic_label}" -> sentiment: ${s}`);
 									}
-								} catch (e) {}
+								} catch (e) {
+									console.warn('Error getting topic sentiment:', e);
+								}
 							const bg = s === 'positive' ? '#dcfce7' : (s === 'negative' ? '#fee2e2' : '#f3f4f6');
 							const bd = s === 'positive' ? '#86efac' : (s === 'negative' ? '#fecaca' : '#e5e7eb');
 							const fg = s === 'positive' ? '#166534' : (s === 'negative' ? '#991b1b' : '#6b7280');

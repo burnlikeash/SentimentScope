@@ -31,6 +31,80 @@ class FilterComponent {
             .replace(/\b\w/g, c => c.toUpperCase());
     }
 
+    // Check if two topics are similar based on common words and meaning
+    areTopicsSimilar(topic1, topic2) {
+        if (!topic1 || !topic2) return false;
+        
+        // Normalize topics for comparison
+        const normalize = (topic) => {
+            return topic.toLowerCase()
+                .replace(/[^\w\s]/g, ' ')  // Replace punctuation with spaces
+                .replace(/\s+/g, ' ')      // Normalize whitespace
+                .trim();
+        };
+        
+        const norm1 = normalize(topic1);
+        const norm2 = normalize(topic2);
+        
+        // If they're exactly the same after normalization, they're similar
+        if (norm1 === norm2) return true;
+        
+        // Split into words
+        const words1 = norm1.split(' ').filter(w => w.length > 2);
+        const words2 = norm2.split(' ').filter(w => w.length > 2);
+        
+        if (words1.length === 0 || words2.length === 0) return false;
+        
+        // Calculate word overlap
+        const commonWords = words1.filter(word => words2.includes(word));
+        const overlapRatio = commonWords.length / Math.min(words1.length, words2.length);
+        
+        // Consider topics similar if they share more than 50% of their words
+        return overlapRatio > 0.5;
+    }
+
+    // Select diverse topics from a pool, avoiding similar topics
+    selectDiverseTopics(topicPool, count) {
+        if (topicPool.length <= count) {
+            return topicPool;
+        }
+        
+        const selected = [];
+        const remaining = [...topicPool];
+        
+        // Shuffle the pool to add randomness while maintaining diversity
+        const shuffled = [...remaining].sort(() => 0.5 - Math.random());
+        
+        for (let i = 0; i < shuffled.length && selected.length < count; i++) {
+            const candidate = shuffled[i];
+            let isSimilar = false;
+            
+            // Check if this topic is similar to any already selected
+            for (const selectedTopic of selected) {
+                if (this.areTopicsSimilar(candidate, selectedTopic)) {
+                    isSimilar = true;
+                    console.log(`Skipping "${candidate}" - similar to "${selectedTopic}"`);
+                    break;
+                }
+            }
+            
+            // If not similar, add it to selected topics
+            if (!isSimilar) {
+                selected.push(candidate);
+                console.log(`Added "${candidate}" to selected topics`);
+            }
+        }
+        
+        // If we couldn't find enough diverse topics, fill with remaining topics
+        if (selected.length < count) {
+            const remainingTopics = shuffled.filter(topic => !selected.includes(topic));
+            selected.push(...remainingTopics.slice(0, count - selected.length));
+            console.log(`Added ${count - selected.length} remaining topics to reach target count`);
+        }
+        
+        return selected;
+    }
+
     init() {
         this.populateTopics();
         this.populateFilters();
@@ -72,9 +146,11 @@ class FilterComponent {
             }
         }
         
-        // Shuffle and pick 6 topics from high-relevance, deduplicated pool
-        const shuffled = [...uniqueTopics].sort(() => 0.5 - Math.random());
-        const selectedTopics = shuffled.slice(0, 6);
+        // Select 6 diverse topics from the pool, avoiding similar topics
+        const selectedTopics = this.selectDiverseTopics(uniqueTopics, 6);
+        
+        // Debug logging for topic selection
+        console.log(`Selected ${selectedTopics.length} diverse topics from pool of ${uniqueTopics.length}:`, selectedTopics);
         
         // Add topic buttons
         selectedTopics.forEach(topic => {
@@ -83,13 +159,18 @@ class FilterComponent {
             try {
                 if (window.dataManager && typeof window.dataManager.getTopicSentiment === 'function') {
                     const s = window.dataManager.getTopicSentiment(topic);
+                    console.log(`Topic button "${topic}" -> sentiment: ${s}`);
                     if (s === 'positive') classes.push('topic-positive');
                     else if (s === 'negative') classes.push('topic-negative');
                     else classes.push('topic-neutral');
                 } else {
+                    console.log(`Topic button "${topic}" -> no dataManager, using neutral`);
                     classes.push('topic-neutral');
                 }
-            } catch (e) { classes.push('topic-neutral'); }
+            } catch (e) { 
+                console.warn(`Topic button "${topic}" -> error getting sentiment:`, e);
+                classes.push('topic-neutral'); 
+            }
             const button = createElement('button', classes, this.formatTopicLabel(topic));
             button.addEventListener('click', () => this.selectTopic(topic));
             this.topicsGrid.appendChild(button);
@@ -275,6 +356,12 @@ class FilterComponent {
 
     getActiveFilters() {
         return this.activeFilters;
+    }
+
+    // Method to refresh topics with new diverse selection
+    refreshTopics() {
+        console.log('Refreshing topics with new diverse selection...');
+        this.populateTopics();
     }
 
     // Helper method to get currently active filter for display
