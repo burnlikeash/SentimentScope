@@ -417,49 +417,60 @@ class SentimentScopeApp {
 		}
 
 		if (completeData && Array.isArray(completeData.topics)) {
-			// Ensure topic labels are readable even if stored with underscores
-			const formatTopicLabel = (label) => {
-				return label
-					? label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-					: '';
-			};
-			
-			if (completeData.topics.length > 0) {
-				additionalSections += `
-					<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
-						<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #111827;">Frequently Mentioned Topics</h3>
-						<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-						${completeData.topics.slice(0, 5).map(topic => {
-								const lbl = formatTopicLabel(topic.topic_label);
-								let s = 'neutral';
-								try {
-									if (window.dataManager && typeof window.dataManager.getTopicSentiment === 'function') {
-										s = window.dataManager.getTopicSentiment(topic.topic_label);
-										// Debug logging for topic sentiment
-										console.log(`Topic "${topic.topic_label}" -> sentiment: ${s}`);
-									}
-								} catch (e) {
-									console.warn('Error getting topic sentiment:', e);
-								}
-							const bg = s === 'positive' ? '#dcfce7' : (s === 'negative' ? '#fee2e2' : '#f3f4f6');
-							const bd = s === 'positive' ? '#86efac' : (s === 'negative' ? '#fecaca' : '#e5e7eb');
-							const fg = s === 'positive' ? '#166534' : (s === 'negative' ? '#991b1b' : '#6b7280');
-							return `<div style=\"background: ${bg}; color: ${fg}; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; border: 1px solid ${bd};\">${lbl}</div>`;
-							}).join('')}
-						</div>
-					</div>
-				`;
-			} else {
-				additionalSections += `
-					<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
-						<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #111827;">Frequently Mentioned Topics</h3>
-						<div style="color: #6b7280; font-size: 0.875rem; font-style: italic;">
-							No topics available.
-						</div>
-					</div>
-				`;
-			}
-		}
+            // Ensure topic labels are readable even if stored with underscores
+            const formatTopicLabel = (label) => {
+                return label
+                    ? label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                    : '';
+            };
+        
+            if (completeData.topics.length > 0) {
+                additionalSections += `
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
+                        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #111827;">Frequently Mentioned Topics</h3>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        ${completeData.topics.slice(0, 5).map(topic => {
+                                const lbl = formatTopicLabel(topic.topic_label);
+                                let s = 'neutral';
+                                try {
+                                    if (topic.sentiment_label) {
+                                        // ✅ Use the sentiment returned by backend first
+                                        s = topic.sentiment_label;
+                                    } else if (topic.average_sentiment) {
+                                        s = topic.average_sentiment;
+                                    } else if (window.dataManager && typeof window.dataManager.getTopicSentiment === 'function') {
+                                        // ✅ Only fallback to dataManager if backend didn't send it
+                                        s = window.dataManager.getTopicSentiment(topic.topic_label);
+                                    }
+                                } catch (e) {
+                                    console.warn('Error getting topic sentiment:', e);
+                                }
+        
+                                // ✅ Apply sentiment-based color coding
+                                const bg = s === 'positive' ? '#dcfce7' :
+                                           s === 'negative' ? '#fee2e2' : '#f3f4f6';
+                                const bd = s === 'positive' ? '#86efac' :
+                                           s === 'negative' ? '#fecaca' : '#e5e7eb';
+                                const fg = s === 'positive' ? '#166534' :
+                                           s === 'negative' ? '#991b1b' : '#6b7280';
+        
+                                return `<div style="background: ${bg}; color: ${fg}; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; border: 1px solid ${bd};">${lbl}</div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                additionalSections += `
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
+                        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #111827;">Frequently Mentioned Topics</h3>
+                        <div style="color: #6b7280; font-size: 0.875rem; font-style: italic;">
+                            No topics available.
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
 
 		modal.innerHTML = `
 			<div class="modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;">

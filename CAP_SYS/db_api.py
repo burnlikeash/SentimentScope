@@ -304,34 +304,51 @@ def get_sentiments(phone_id: int) -> Dict:
 # 5. Get topics by phone - Updated for your schema
 @app.get("/topics")
 def get_topics(phone_id: int) -> List[Dict]:
-    """Get discussion topics for a phone with relevance scores"""
+    """Get discussion topics for a phone with relevance scores and sentiment summary"""
     try:
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT 
-                t.*,
-                COUNT(DISTINCT rt.review_id) as review_mentions,
-                AVG(rt.relevance_score) as avg_relevance
+                t.topic_id,
+                t.phone_id,
+                t.topic_label,
+                t.representative_terms,
+                COUNT(DISTINCT rt.review_id) AS review_mentions,
+                AVG(rt.relevance_score) AS avg_relevance,
+                -- ✅ Compute aggregated sentiment per topic
+                CASE
+                    WHEN AVG(CASE s.sentiment_label
+                              WHEN 'positive' THEN 1
+                              WHEN 'negative' THEN -1
+                              ELSE 0 END) > 0.2 THEN 'positive'
+                    WHEN AVG(CASE s.sentiment_label
+                              WHEN 'positive' THEN 1
+                              WHEN 'negative' THEN -1
+                              ELSE 0 END) < -0.2 THEN 'negative'
+                    ELSE 'neutral'
+                END AS sentiment_label
             FROM topics t
             LEFT JOIN review_topics rt ON t.topic_id = rt.topic_id
+            LEFT JOIN sentiments s ON s.review_id = rt.review_id
             WHERE t.phone_id = %s
             GROUP BY t.topic_id
             ORDER BY avg_relevance DESC, review_mentions DESC
         """, (phone_id,))
         results = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        # Convert float fields
+
+        # Convert avg_relevance to float for JSON serialization
         for result in results:
             if result['avg_relevance'] is not None:
                 result['avg_relevance'] = float(result['avg_relevance'])
-        
-        logger.info(f"Retrieved {len(results)} topics for phone {phone_id}")
+
+        cursor.close()
+        conn.close()
+
+        logger.info(f"Retrieved {len(results)} topics with sentiment for phone {phone_id}")
         return results
     except Exception as e:
-        logger.error(f"Error getting topics: {e}")
+        logger.error(f"Error getting topics for phone {phone_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # 6. Get complete phone details with all related data
@@ -375,13 +392,52 @@ def get_complete_phone_data(phone_id: int) -> Dict:
         # Compute star rating from sentiments distribution (positive percentage)
         positive_percentage = 0.0
         try:
-            positive_percentage = float(sentiments.get("sentiments", {}).get("positive", {}).get("percentage", 0.0) or 0.0)
+            positive_percentage = float(
+                sentiments.get("sentiments", {}).get("positive", {}).get("percentage", 0.0) or 0.0
+            )
         except Exception:
             positive_percentage = 0.0
+
         star_rating = compute_star_rating_from_positive_percentage(positive_percentage)
 
+        # ✅ Inline topic sentiment aggregation (with correct indentation)
         try:
-            topics = get_topics(phone_id)
+            conn = get_db()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT 
+                    t.topic_id,
+                    t.phone_id,
+                    t.topic_label,
+                    t.representative_terms,
+                    COUNT(DISTINCT rt.review_id) AS review_mentions,
+                    AVG(rt.relevance_score) AS avg_relevance,
+                    CASE
+                        WHEN AVG(CASE s.sentiment_label
+                                 WHEN 'positive' THEN 1
+                                 WHEN 'negative' THEN -1
+                                 ELSE 0 END) > 0 THEN 'positive'
+                        WHEN AVG(CASE s.sentiment_label
+                                 WHEN 'positive' THEN 1
+                                 WHEN 'negative' THEN -1
+                                 ELSE 0 END) < 0 THEN 'negative'
+                        ELSE 'neutral'
+                    END AS sentiment_label
+                FROM topics t
+                LEFT JOIN review_topics rt ON t.topic_id = rt.topic_id
+                LEFT JOIN sentiments s ON s.review_id = rt.review_id
+                WHERE t.phone_id = %s
+                GROUP BY t.topic_id
+                ORDER BY avg_relevance DESC, review_mentions DESC
+            """, (phone_id,))
+            topics = cursor.fetchall()
+
+            for t in topics:
+                if t["avg_relevance"] is not None:
+                    t["avg_relevance"] = float(t["avg_relevance"])
+
+            cursor.close()
+            conn.close()
         except Exception as e:
             logger.warning(f"Could not fetch topics for phone {phone_id}: {e}")
             topics = []
@@ -389,6 +445,7 @@ def get_complete_phone_data(phone_id: int) -> Dict:
         # Attach star_rating to phone object for convenience and include separately
         phone_with_rating = dict(phone)
         phone_with_rating["star_rating"] = float(star_rating)
+
         return {
             "phone": phone_with_rating,
             "star_rating": float(star_rating),
@@ -396,12 +453,12 @@ def get_complete_phone_data(phone_id: int) -> Dict:
             "reviews": reviews,
             "topics": topics
         }
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting complete phone data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # 7. Search functionality updated for your schema
 @app.get("/search")
